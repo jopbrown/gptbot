@@ -1,0 +1,18 @@
+ChatGptApiUrl: https://api.openai.com/v1
+SessionExpirePeriod: 30m0s
+SessionClearInterval: 1m0s
+DefaultRole: 聊天機器人
+ServePort: 8080
+MaxTaskQueueCap: 1024
+CmdsTalkToAI:
+    - '@ai'
+    - '@小愛'
+    - '@小爱'
+CmdsClearSession:
+    - /refresh
+    - /clear
+    - /clean
+    - /清空
+CmdsChangeRole:
+    - /扮演
+    - /cosplay

@@ -1,0 +1,5 @@
+DebugMode: true
+LineChannelToken: xxxxxxxxx
+LineChannelSecret: xxxxxxxxxx
+ChatGptAccessToken: xxxxxxxxxx
+ServePort: 8888
