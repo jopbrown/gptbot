@@ -72,7 +72,16 @@ func (task *ChatTask) Do(bot *Bot) error {
 
 	if err != nil {
 		if task.ReplyFn != nil {
-			err1 := task.ReplyFn(fmt.Sprintf("小愛壞掉了:\n%s\n如果問題持續發生，建議清空。", errors.GetErrorDetails(err)))
+			var err1 error
+			switch GetOpenAIErrCode(err) {
+			case 401:
+				err1 = task.ReplyFn(fmt.Sprintf("OpenAI的token過期了，請聯繫管理員更新:\n%s", errors.GetErrorDetails(err)))
+			case 500:
+				err1 = task.ReplyFn(fmt.Sprintf("Server掛掉了，請聯繫管理員:\n%s", errors.GetErrorDetails(err)))
+			default:
+				err1 = task.ReplyFn(fmt.Sprintf("小愛壞掉了，可以嘗試輸入清空指令修復:\n%s", errors.GetErrorDetails(err)))
+			}
+
 			if err1 != nil {
 				return errors.ErrorAt(errors.Join(err, err1))
 			}
