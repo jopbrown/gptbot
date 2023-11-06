@@ -75,7 +75,7 @@ func (bot *Bot) UpdateApiServerAccessToken() error {
 	}
 
 	reqUrl := fmt.Sprintf("%s://%s/admin/tokens", url.Scheme, url.Host)
-	tokens := []secret{{Token: bot.cfg.ChatGptAccessToken}}
+	tokens := map[string]secret{"": {Token: bot.cfg.ChatGptAccessToken}}
 
 	log.Debugf("send update token request to `%s`", reqUrl)
 
