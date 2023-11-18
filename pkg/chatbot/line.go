@@ -41,6 +41,9 @@ func (bot *Bot) linebotCallback(c *gin.Context) {
 					}
 				} else {
 					trimedMsg, isTalkToAI := messageMatchCmd(msg, bot.cfg.CmdsTalkToAI)
+					if bot.cfg.NotNeedPrefixCmdToTalkInGroup {
+						isTalkToAI = true
+					}
 					if isTalkToAI || !lineIsGroupEvent(event) {
 						userName, err := bot.lineGetUserName(event.Source.UserID)
 						if err != nil {
