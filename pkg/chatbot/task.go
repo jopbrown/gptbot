@@ -38,19 +38,23 @@ func (task *ChatTask) Do(bot *Bot) error {
 	defer recorder.Close()
 
 	role := bot.cfg.Roles[s.Role]
-	if len(s.Messages) == 0 && len(role) != 0 {
+	if role.MaxConversationCount > 0 && len(s.Messages) >= role.MaxConversationCount*2+1 {
+		s.Clear()
+	}
+
+	if len(s.Messages) == 0 && len(role.Prompt) != 0 {
 		log.Debug("append system message ...")
 		s.AddMessage(&openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
-			Content: role,
+			Content: role.Prompt,
 		})
 		fmt.Fprintln(recorder, "#####################")
-		fmt.Fprintln(recorder, role)
+		fmt.Fprintln(recorder, role.Prompt)
 	}
 
 	msg := task.Message
 	toMsg := fmt.Sprintf("%s: %s", task.UserName, msg)
-	if s.Role == "女僕" || s.Role == "聊天機器人" {
+	if role.PrefixUserName {
 		msg = toMsg
 	}
 	log.Info(msg)

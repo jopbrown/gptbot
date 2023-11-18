@@ -5,7 +5,6 @@ NotPushExpireMessage: false
 DefaultRole: 聊天機器人
 ServePort: 8080
 MaxTaskQueueCap: 1024
-NotNeedPrefixCmdToTalkInGroup: false
 CmdsTalkToAI:
     - '@ai'
     - '@小愛'

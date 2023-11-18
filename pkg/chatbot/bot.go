@@ -205,7 +205,16 @@ func (bot *Bot) stopHandler(c *gin.Context) {
 }
 
 func messageMatchCmd(msg string, cmds []string) (string, bool) {
+	if len(cmds) == 0 {
+		return msg, true
+	}
+
 	for _, cmd := range cmds {
+		// empty command means not need to prefix anything
+		if cmd == "" {
+			return msg, true
+		}
+
 		if cmd[0] == '/' && msg[1] != '/' {
 			cmd = cmd[1:]
 		}

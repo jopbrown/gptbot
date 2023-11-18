@@ -16,7 +16,13 @@ const (
 `
 )
 
-type Roles map[string]string
+type Role struct {
+	Prompt               string `yaml:"Prompt"`
+	MaxConversationCount int    `yaml:"MaxConversationCount"`
+	PrefixUserName       bool   `yaml:"PrefixUserName"`
+}
+
+type Roles map[string]*Role
 
 func DefaultRoles() Roles {
 	r := errors.Must1(defaultCfgFs.Open("default/roles.yaml"))
