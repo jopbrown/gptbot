@@ -156,18 +156,22 @@ func (bot *Bot) DoTasks() {
 func (bot *Bot) ClearExpiredSessionsPeriodically() {
 	ticker := time.NewTicker(bot.cfg.SessionClearInterval)
 	defer ticker.Stop()
+
+	task := &ClearExpiredSessionsTask{}
+	if !bot.cfg.NotPushExpireMessage {
+		task.PushMessageFn = func(sessionID, msg string) error {
+			_, err := bot.lineClient.PushMessage(sessionID, linebot.NewTextMessage(msg)).Do()
+			if err != nil {
+				return errors.ErrorAt(err)
+			}
+			return nil
+		}
+	}
+
 	for {
 		select {
 		case <-ticker.C:
-			bot.taskQueue <- &ClearExpiredSessionsTask{
-				PushMessageFn: func(sessionID, msg string) error {
-					_, err := bot.lineClient.PushMessage(sessionID, linebot.NewTextMessage(msg)).Do()
-					if err != nil {
-						return errors.ErrorAt(err)
-					}
-					return nil
-				},
-			}
+			bot.taskQueue <- task
 		case <-bot.stop:
 			return
 		}

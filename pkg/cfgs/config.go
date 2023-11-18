@@ -21,6 +21,7 @@ type Config struct {
 	ChatGptAccessToken   string        `yaml:"ChatGptAccessToken"`
 	SessionExpirePeriod  time.Duration `yaml:"SessionExpirePeriod"`
 	SessionClearInterval time.Duration `yaml:"SessionClearInterval"`
+	NotPushExpireMessage bool          `yaml:"NotPushExpireMessage"`
 	DefaultRole          string        `yaml:"DefaultRole"`
 	Roles                Roles         `yaml:"Roles"`
 	ServePort            int           `yaml:"ServePort"`

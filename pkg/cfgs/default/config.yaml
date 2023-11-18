@@ -1,6 +1,7 @@
 ChatGptApiUrl: https://api.openai.com/v1
 SessionExpirePeriod: 30m0s
 SessionClearInterval: 1m0s
+NotPushExpireMessage: false
 DefaultRole: 聊天機器人
 ServePort: 8080
 MaxTaskQueueCap: 1024
