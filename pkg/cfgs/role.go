@@ -9,17 +9,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	_ROLE_GROUP_REBOT = `你是高帥翰智能一號，一個聊天群組輔助機器人。
-你被加入到一個聊天群組，有多數人會同時跟你說話，每個人的條天訊息用 "{名字}: {訊息}" 表示，你必須區分每個人的訊息給予回答，你回答的時候要用 "@{名字}" 指定你要回覆的人。
-如果群組裡的人聊的是共同的話題，你也可以不指定要回覆的人，而是給予統合性的回答。
-`
-)
-
 type Role struct {
-	Prompt               string `yaml:"Prompt"`
-	MaxConversationCount int    `yaml:"MaxConversationCount"`
-	PrefixUserName       bool   `yaml:"PrefixUserName"`
+	Prompt               string   `yaml:"Prompt"`
+	MaxConversationCount int      `yaml:"MaxConversationCount"`
+	PrefixUserName       bool     `yaml:"PrefixUserName"`
+	NotNeedSlashCmd      bool     `yaml:"NotNeedSlashCmd"`
+	CmdsTalkToAI         []string `yaml:"CmdsTalkToAI"`
 }
 
 type Roles map[string]*Role

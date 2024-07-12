@@ -24,6 +24,7 @@ type ChatTask struct {
 	UserName  string
 	SessionID string
 	Message   string
+	IsGroup   bool
 	ReplyFn   func(reply string, imgUrls ...string) error
 }
 
@@ -42,6 +43,17 @@ func (task *ChatTask) Do(bot *Bot) error {
 		s.Clear()
 	}
 
+	cmds := bot.cfg.CmdsTalkToAI
+	if len(role.CmdsTalkToAI) > 0 {
+		cmds = role.CmdsTalkToAI
+	}
+	msg := task.Message
+	msg, isTalkToAI := messageMatchCmd(msg, cmds)
+	if task.IsGroup && !isTalkToAI && !role.NotNeedSlashCmd {
+		log.Debug("skip talk to AI")
+		return nil
+	}
+
 	if len(s.Messages) == 0 && len(role.Prompt) != 0 {
 		log.Debug("append system message ...")
 		s.AddMessage(&openai.ChatCompletionMessage{
@@ -52,7 +64,6 @@ func (task *ChatTask) Do(bot *Bot) error {
 		fmt.Fprintln(recorder, role.Prompt)
 	}
 
-	msg := task.Message
 	toMsg := fmt.Sprintf("%s: %s", task.UserName, msg)
 	if role.PrefixUserName {
 		msg = toMsg
@@ -69,7 +80,7 @@ func (task *ChatTask) Do(bot *Bot) error {
 	resp, err := bot.gptClient.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model:    openai.GPT3Dot5Turbo,
+			Model:    bot.cfg.ChatGptModel,
 			Messages: s.Messages,
 		},
 	)
@@ -79,7 +90,7 @@ func (task *ChatTask) Do(bot *Bot) error {
 			var err1 error
 			switch GetOpenAIErrCode(err) {
 			case 401:
-				err1 = task.ReplyFn(fmt.Sprintf("OpenAI的token過期了，請聯繫管理員更新:\n%s", errors.GetErrorDetails(err)))
+				err1 = task.ReplyFn(fmt.Sprintf("AI的token過期了，請聯繫管理員更新:\n%s", errors.GetErrorDetails(err)))
 			case 500:
 				err1 = task.ReplyFn(fmt.Sprintf("Server掛掉了，請聯繫管理員:\n%s", errors.GetErrorDetails(err)))
 			default:
@@ -113,13 +124,15 @@ func (task *ChatTask) Do(bot *Bot) error {
 	return nil
 }
 
-var reImgUrl = regexp.MustCompile(`https://image.pollinations.ai/prompt/[-a-zA-Z0-9@:%_\+,.~#?&//=]+`)
+var reImgUrl = regexp.MustCompile(`https://image.pollinations.ai/prompt/[-a-zA-Z0-9@:%_\+,.~#?&//=\s]+`)
 
 func getImageUrlsFromReply(reply string) (string, []string) {
 	urls := reImgUrl.FindAllString(reply, -1)
 	imgUrls := make([]string, 0, len(urls))
 	for i, url := range urls {
-		imgUrls = append(imgUrls, url)
+		tidyUrl := strings.TrimSpace(url)
+		tidyUrl = strings.ReplaceAll(tidyUrl, " ", "-")
+		imgUrls = append(imgUrls, tidyUrl)
 		reply = strings.Replace(reply, url, fmt.Sprintf("圖%d", i+1), -1)
 	}
 
@@ -152,7 +165,6 @@ type ChangeRoleTask struct {
 }
 
 func (task *ChangeRoleTask) Do(bot *Bot) error {
-	// task.Role = must.Value(must.Value(gocc.New("s2tw")).Convert(task.Role))
 	_, ok := bot.cfg.Roles[task.Role]
 	var msg string
 	if ok {

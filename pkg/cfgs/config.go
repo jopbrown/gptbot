@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/imdario/mergo"
+	"dario.cat/mergo"
 	"github.com/jopbrown/gobase/errors"
 	"github.com/jopbrown/gobase/fsutil"
 	"gopkg.in/yaml.v3"
@@ -19,6 +19,7 @@ type Config struct {
 	LineChannelSecret    string        `yaml:"LineChannelSecret"`
 	ChatGptApiUrl        string        `yaml:"ChatGptApiUrl"`
 	ChatGptAccessToken   string        `yaml:"ChatGptAccessToken"`
+	ChatGptModel         string        `yaml:"ChatGptModel"`
 	SessionExpirePeriod  time.Duration `yaml:"SessionExpirePeriod"`
 	SessionClearInterval time.Duration `yaml:"SessionClearInterval"`
 	NotPushExpireMessage bool          `yaml:"NotPushExpireMessage"`

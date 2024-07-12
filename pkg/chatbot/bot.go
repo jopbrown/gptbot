@@ -1,12 +1,8 @@
 package chatbot
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -63,61 +59,7 @@ func NewBot(cfg *cfgs.Config) (*Bot, error) {
 	return bot, nil
 }
 
-func (bot *Bot) UpdateApiServerAccessToken() error {
-	type secret struct {
-		Token string `json:"token"`
-		PUID  string `json:"puid"`
-	}
-
-	url, err := url.ParseRequestURI(bot.cfg.ChatGptApiUrl)
-	if err != nil {
-		return errors.ErrorAt(err)
-	}
-
-	reqUrl := fmt.Sprintf("%s://%s/admin/tokens", url.Scheme, url.Host)
-	tokens := map[string]secret{"": {Token: bot.cfg.ChatGptAccessToken}}
-
-	log.Debugf("send update token request to `%s`", reqUrl)
-
-	payload, err := json.Marshal(tokens)
-	if err != nil {
-		return errors.ErrorAt(err)
-	}
-
-	req, err := http.NewRequest("PATCH", reqUrl, bytes.NewBuffer(payload))
-	if err != nil {
-		return errors.ErrorAt(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "TotallySecurePassword")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		if err != nil {
-			return errors.ErrorAt(err)
-		}
-
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("update token request got non-200 status: %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
 func (bot *Bot) Serve() error {
-
-	// Verify if the service originates from the ChatGPT web application.
-	if strings.HasPrefix(bot.cfg.ChatGptAccessToken, "eyJhbGciOiJSUzI1NiI") {
-		err := bot.UpdateApiServerAccessToken()
-		if err != nil {
-			return errors.ErrorAt(err)
-		}
-	}
-
 	addr := fmt.Sprintf(":%d", bot.cfg.ServePort)
 	server := &http.Server{Addr: addr, Handler: bot.handler}
 
@@ -202,33 +144,4 @@ func (bot *Bot) stopHandler(c *gin.Context) {
 	log.Info("stop service after 5s")
 	time.Sleep(5 * time.Second)
 	bot.Stop()
-}
-
-func messageMatchCmd(msg string, cmds []string) (string, bool) {
-	if len(cmds) == 0 {
-		return msg, true
-	}
-
-	for _, cmd := range cmds {
-		// empty command means not need to prefix anything
-		if cmd == "" {
-			return msg, true
-		}
-
-		if cmd[0] == '/' && msg[1] != '/' {
-			cmd = cmd[1:]
-		}
-
-		if len(msg) < len(cmd) {
-			continue
-		}
-
-		if strings.EqualFold(msg[:len(cmd)], cmd) {
-			if len(msg) == len(cmd) {
-				return msg, true
-			}
-			return strings.TrimSpace(msg[len(cmd):]), true
-		}
-	}
-	return msg, false
 }

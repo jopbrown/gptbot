@@ -40,21 +40,18 @@ func (bot *Bot) linebotCallback(c *gin.Context) {
 						ReplyFn:   bot.lineReplyFnWithToken(event.ReplyToken),
 					}
 				} else {
-					trimedMsg, isTalkToAI := messageMatchCmd(msg, bot.cfg.CmdsTalkToAI)
-					if isTalkToAI || !lineIsGroupEvent(event) {
-						userName, err := bot.lineGetUserName(event.Source.UserID)
-						if err != nil {
-							log.ErrorAt(err)
-							continue
-						}
-						log.Debug("userName: ", userName)
-
-						bot.taskQueue <- &ChatTask{
-							UserName:  userName,
-							SessionID: lineGetSessionID(event),
-							Message:   trimedMsg,
-							ReplyFn:   bot.lineReplyFnWithToken(event.ReplyToken),
-						}
+					userName, err := bot.lineGetUserName(event.Source.UserID)
+					if err != nil {
+						log.ErrorAt(err)
+						continue
+					}
+					log.Debug("userName: ", userName)
+					bot.taskQueue <- &ChatTask{
+						UserName:  userName,
+						SessionID: lineGetSessionID(event),
+						Message:   msg,
+						IsGroup:   lineIsGroupEvent(event),
+						ReplyFn:   bot.lineReplyFnWithToken(event.ReplyToken),
 					}
 				}
 

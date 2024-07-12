@@ -2,6 +2,7 @@ package chatbot
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/jopbrown/gobase/errors"
 	"github.com/sashabaranov/go-openai"
@@ -17,4 +18,33 @@ func GetOpenAIErrCode(err error) int {
 	}
 
 	return http.StatusOK
+}
+
+func messageMatchCmd(msg string, cmds []string) (string, bool) {
+	if len(cmds) == 0 {
+		return msg, true
+	}
+
+	for _, cmd := range cmds {
+		// empty command means not need to prefix anything
+		if cmd == "" {
+			return msg, true
+		}
+
+		if cmd[0] == '/' && msg[1] != '/' {
+			cmd = cmd[1:]
+		}
+
+		if len(msg) < len(cmd) {
+			continue
+		}
+
+		if strings.EqualFold(msg[:len(cmd)], cmd) {
+			if len(msg) == len(cmd) {
+				return msg, true
+			}
+			return strings.TrimSpace(msg[len(cmd):]), true
+		}
+	}
+	return msg, false
 }
