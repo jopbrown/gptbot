@@ -63,15 +63,6 @@ func (s *Session) Clear() {
 	s.LastUpdateDate = time.Now()
 }
 
-func (s *Session) ShortID() string {
-	const _SHORT_ID_LEN = 24
-	if len(s.ID) <= _SHORT_ID_LEN {
-		return s.ID
-	}
-
-	return s.ID[:_SHORT_ID_LEN]
-}
-
 func (s *Session) AddMessage(msg *openai.ChatCompletionMessage) {
 	s.Messages = append(s.Messages, *msg)
 	s.LastUpdateDate = time.Now()

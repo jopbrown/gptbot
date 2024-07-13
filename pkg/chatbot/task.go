@@ -31,7 +31,7 @@ type ChatTask struct {
 func (task *ChatTask) Do(bot *Bot) error {
 	log.Debugf("do chat task...\n %+v", task)
 
-	recorder, err := rotate.OpenFile(filepath.Join(bot.cfg.LogPath, "chats", fmt.Sprintf("%s.txt", task.Session.ShortID())), 24*time.Hour, 0)
+	recorder, err := rotate.OpenFile(filepath.Join(bot.cfg.LogPath, "chats", fmt.Sprintf("%s.txt", task.Session.ID)), 24*time.Hour, 0)
 	if err != nil {
 		return errors.ErrorAt(err)
 	}
