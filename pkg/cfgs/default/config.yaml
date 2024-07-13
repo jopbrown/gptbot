@@ -2,10 +2,11 @@ ChatGptApiUrl: https://api.openai.com/v1
 ChatGptModel: gpt-3.5-turbo
 SessionExpirePeriod: 30m0s
 SessionClearInterval: 1m0s
-NotPushExpireMessage: false
-DefaultRole: 聊天機器人
 ServePort: 8080
 MaxTaskQueueCap: 1024
+Bots:
+    /linebot:
+        DefaultRole: 聊天機器人
 CmdsTalkToAI:
     - "@ai"
     - "@小愛"

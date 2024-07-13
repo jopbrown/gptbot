@@ -2,6 +2,7 @@ package chatbot
 
 import (
 	"net/http"
+	"path"
 	"strings"
 	"unicode"
 
@@ -12,8 +13,11 @@ import (
 )
 
 func (bot *Bot) linebotCallback(c *gin.Context) {
-	events, err := bot.lineClient.ParseRequest(c.Request)
+	fpath := c.FullPath()
+	client := bot.lineClients[fpath]
+	defaultRole := bot.cfg.Bots[c.FullPath()].DefaultRole
 
+	events, err := client.ParseRequest(c.Request)
 	if err != nil {
 		if err == linebot.ErrInvalidSignature {
 			c.JSON(http.StatusBadRequest, gin.H{"message": linebot.ErrInvalidSignature})
@@ -25,33 +29,35 @@ func (bot *Bot) linebotCallback(c *gin.Context) {
 
 	for _, event := range events {
 		if event.Type == linebot.EventTypeMessage {
+			sessionID := path.Join(fpath, lineGetSessionID(event))
+			session := bot.sessMgr.GetSession(sessionID, defaultRole)
 			switch message := event.Message.(type) {
 			case *linebot.TextMessage:
 				msg := strings.TrimLeftFunc(message.Text, unicode.IsSpace)
 				if _, ok := messageMatchCmd(msg, bot.cfg.CmdsClearSession); ok {
 					bot.taskQueue <- &ClearSessionTask{
-						SessionID: lineGetSessionID(event),
-						ReplyFn:   bot.lineReplyFnWithToken(event.ReplyToken),
+						Session: session,
+						ReplyFn: bot.lineReplyFnWithToken(client, event.ReplyToken),
 					}
 				} else if role, ok := messageMatchCmd(msg, bot.cfg.CmdsChangeRole); ok {
 					bot.taskQueue <- &ChangeRoleTask{
-						SessionID: lineGetSessionID(event),
-						Role:      role,
-						ReplyFn:   bot.lineReplyFnWithToken(event.ReplyToken),
+						Session: session,
+						Role:    role,
+						ReplyFn: bot.lineReplyFnWithToken(client, event.ReplyToken),
 					}
 				} else {
-					userName, err := bot.lineGetUserName(event.Source.UserID)
+					userName, err := bot.lineGetUserName(client, event.Source.UserID)
 					if err != nil {
 						log.ErrorAt(err)
 						continue
 					}
 					log.Debug("userName: ", userName)
 					bot.taskQueue <- &ChatTask{
-						UserName:  userName,
-						SessionID: lineGetSessionID(event),
-						Message:   msg,
-						IsGroup:   lineIsGroupEvent(event),
-						ReplyFn:   bot.lineReplyFnWithToken(event.ReplyToken),
+						UserName: userName,
+						Session:  session,
+						Message:  msg,
+						IsGroup:  lineIsGroupEvent(event),
+						ReplyFn:  bot.lineReplyFnWithToken(client, event.ReplyToken),
 					}
 				}
 
@@ -64,25 +70,25 @@ func (bot *Bot) linebotCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "success"})
 }
 
-func (bot *Bot) lineReplyFnWithToken(token string) func(string, ...string) error {
+func (bot *Bot) lineReplyFnWithToken(client *linebot.Client, token string) func(string, ...string) error {
 	return func(reply string, imgUrls ...string) error {
 		msgs := make([]linebot.SendingMessage, 0, 1+len(imgUrls))
 		msgs = append(msgs, linebot.NewTextMessage(reply))
 		for _, url := range imgUrls {
 			msgs = append(msgs, linebot.NewImageMessage(url, url))
 		}
-		if _, err := bot.lineClient.ReplyMessage(token, msgs...).Do(); err != nil {
+		if _, err := client.ReplyMessage(token, msgs...).Do(); err != nil {
 			return errors.ErrorAt(err)
 		}
 		return nil
 	}
 }
 
-func (bot *Bot) lineGetUserName(userID string) (string, error) {
+func (bot *Bot) lineGetUserName(client *linebot.Client, userID string) (string, error) {
 	if userName, ok := bot.userNameCache[userID]; ok {
 		return userName, nil
 	}
-	profile, err := bot.lineClient.GetProfile(userID).Do()
+	profile, err := client.GetProfile(userID).Do()
 	if err != nil {
 		log.Warnf(errors.GetErrorDetails(errors.ErrorAtf(err, "unable to get user profile: %s", userID)))
 		return "路人甲", nil

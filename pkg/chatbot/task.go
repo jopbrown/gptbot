@@ -21,26 +21,25 @@ type Task interface {
 }
 
 type ChatTask struct {
-	UserName  string
-	SessionID string
-	Message   string
-	IsGroup   bool
-	ReplyFn   func(reply string, imgUrls ...string) error
+	UserName string
+	Session  *Session
+	Message  string
+	IsGroup  bool
+	ReplyFn  func(reply string, imgUrls ...string) error
 }
 
 func (task *ChatTask) Do(bot *Bot) error {
 	log.Debugf("do chat task...\n %+v", task)
 
-	s := bot.sessMgr.GetSession(task.SessionID)
-	recorder, err := rotate.OpenFile(filepath.Join(bot.cfg.LogPath, "chats", fmt.Sprintf("chat-%s.txt", s.ShortID())), 24*time.Hour, 0)
+	recorder, err := rotate.OpenFile(filepath.Join(bot.cfg.LogPath, "chats", fmt.Sprintf("%s.txt", task.Session.ShortID())), 24*time.Hour, 0)
 	if err != nil {
 		return errors.ErrorAt(err)
 	}
 	defer recorder.Close()
 
-	role := bot.cfg.Roles[s.Role]
-	if role.MaxConversationCount > 0 && len(s.Messages) >= role.MaxConversationCount*2+1 {
-		s.Clear()
+	role := bot.cfg.Roles[task.Session.Role]
+	if role.MaxConversationCount > 0 && len(task.Session.Messages) >= role.MaxConversationCount*2+1 {
+		task.Session.Clear()
 	}
 
 	cmds := bot.cfg.CmdsTalkToAI
@@ -54,9 +53,9 @@ func (task *ChatTask) Do(bot *Bot) error {
 		return nil
 	}
 
-	if len(s.Messages) == 0 && len(role.Prompt) != 0 {
+	if len(task.Session.Messages) == 0 && len(role.Prompt) != 0 {
 		log.Debug("append system message ...")
-		s.AddMessage(&openai.ChatCompletionMessage{
+		task.Session.AddMessage(&openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
 			Content: role.Prompt,
 		})
@@ -74,14 +73,14 @@ func (task *ChatTask) Do(bot *Bot) error {
 	chatMsg := &openai.ChatCompletionMessage{}
 	chatMsg.Content = msg
 	chatMsg.Role = openai.ChatMessageRoleUser
-	s.AddMessage(chatMsg)
+	task.Session.AddMessage(chatMsg)
 
 	log.Debug("send message to chatgpt ...")
 	resp, err := bot.gptClient.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model:    bot.cfg.ChatGptModel,
-			Messages: s.Messages,
+			Messages: task.Session.Messages,
 		},
 	)
 
@@ -108,13 +107,14 @@ func (task *ChatTask) Do(bot *Bot) error {
 	respMsg.Role = openai.ChatMessageRoleAssistant
 	respMsg.Content = resp.Choices[0].Message.Content
 
-	s.AddMessage(respMsg)
+	task.Session.AddMessage(respMsg)
 	log.Info("AI:", respMsg.Content)
 	fmt.Fprintln(recorder, "AI:", respMsg.Content)
 
 	if task.ReplyFn != nil {
 		log.Debug("replay message to line ...")
 		reply, urls := getImageUrlsFromReply(respMsg.Content)
+		reply = strings.TrimSpace(reply)
 		err = task.ReplyFn(reply, urls...)
 		if err != nil {
 			return errors.ErrorAt(err)
@@ -140,13 +140,13 @@ func getImageUrlsFromReply(reply string) (string, []string) {
 }
 
 type ClearSessionTask struct {
-	SessionID string
-	ReplyFn   func(reply string, imgUrls ...string) error
+	Session *Session
+	ReplyFn func(reply string, imgUrls ...string) error
 }
 
 func (task *ClearSessionTask) Do(bot *Bot) error {
-	log.Infof("clear session %s ...", task.SessionID)
-	bot.sessMgr.GetSession(task.SessionID).Clear()
+	log.Infof("clear session %s ...", task.Session.ID)
+	task.Session.Clear()
 
 	if task.ReplyFn != nil {
 		log.Debug("reply message to line ...")
@@ -159,17 +159,17 @@ func (task *ClearSessionTask) Do(bot *Bot) error {
 }
 
 type ChangeRoleTask struct {
-	SessionID string
-	Role      string
-	ReplyFn   func(reply string, imgUrls ...string) error
+	Session *Session
+	Role    string
+	ReplyFn func(reply string, imgUrls ...string) error
 }
 
 func (task *ChangeRoleTask) Do(bot *Bot) error {
 	_, ok := bot.cfg.Roles[task.Role]
 	var msg string
 	if ok {
-		log.Infof("session(%s) 變更角色為<%s>", task.SessionID, task.Role)
-		bot.sessMgr.GetSession(task.SessionID).ChangeRole(task.Role)
+		log.Infof("session(%s) 變更角色為<%s>", task.Session.ID, task.Role)
+		task.Session.ChangeRole(task.Role)
 		msg = fmt.Sprintf("小愛將扮演<%s>", task.Role)
 	} else {
 		keys := maps.Keys(bot.cfg.Roles)
@@ -185,32 +185,4 @@ func (task *ChangeRoleTask) Do(bot *Bot) error {
 		}
 	}
 	return nil
-}
-
-type ClearExpiredSessionsTask struct {
-	PushMessageFn func(sessionID, msg string) error
-}
-
-func (task *ClearExpiredSessionsTask) Do(bot *Bot) error {
-	ids := bot.sessMgr.ClearExpiredSessions(bot.cfg.SessionExpirePeriod)
-	if len(ids) == 0 {
-		return nil
-	}
-	log.Infof("clear expired sessions: %v", ids)
-
-	if task.PushMessageFn == nil {
-		return nil
-	}
-
-	msg := fmt.Sprintf(`超過 %v 沒有人跟小愛說話了，小愛將忘記剛剛所有的對話`, bot.cfg.SessionExpirePeriod)
-
-	var errs error
-	for _, id := range ids {
-		log.Debug("push expired session notify ...")
-		err := task.PushMessageFn(id, msg)
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
-	}
-	return errs
 }

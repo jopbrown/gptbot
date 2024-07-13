@@ -14,9 +14,9 @@ import (
 )
 
 type Bot struct {
-	cfg        *cfgs.Config
-	lineClient *linebot.Client
-	gptClient  *openai.Client
+	cfg         *cfgs.Config
+	gptClient   *openai.Client
+	lineClients map[string]*linebot.Client
 
 	sessMgr       *SessionManager
 	taskQueue     chan Task
@@ -30,16 +30,20 @@ func NewBot(cfg *cfgs.Config) (*Bot, error) {
 	bot := &Bot{}
 	bot.cfg = cfg
 
-	bot.lineClient, err = linebot.New(cfg.LineChannelSecret, cfg.LineChannelToken)
-	if err != nil {
-		return nil, errors.ErrorAt(err)
+	bot.lineClients = make(map[string]*linebot.Client, len(cfg.Bots))
+	for path, botcfg := range cfg.Bots {
+		client, err := linebot.New(botcfg.LineChannelSecret, botcfg.LineChannelToken)
+		if err != nil {
+			return nil, errors.ErrorAt(err)
+		}
+		bot.lineClients[path] = client
 	}
 
 	gptCfg := openai.DefaultConfig(cfg.ChatGptAccessToken)
 	gptCfg.BaseURL = cfg.ChatGptApiUrl
 	bot.gptClient = openai.NewClientWithConfig(gptCfg)
 
-	bot.sessMgr = NewSessionManager(cfg.DefaultRole)
+	bot.sessMgr = NewSessionManager()
 	bot.taskQueue = make(chan Task, bot.cfg.MaxTaskQueueCap)
 
 	bot.handler = gin.Default()
@@ -99,21 +103,13 @@ func (bot *Bot) ClearExpiredSessionsPeriodically() {
 	ticker := time.NewTicker(bot.cfg.SessionClearInterval)
 	defer ticker.Stop()
 
-	task := &ClearExpiredSessionsTask{}
-	if !bot.cfg.NotPushExpireMessage {
-		task.PushMessageFn = func(sessionID, msg string) error {
-			_, err := bot.lineClient.PushMessage(sessionID, linebot.NewTextMessage(msg)).Do()
-			if err != nil {
-				return errors.ErrorAt(err)
-			}
-			return nil
-		}
-	}
-
 	for {
 		select {
 		case <-ticker.C:
-			bot.taskQueue <- task
+			ids := bot.sessMgr.ClearExpiredSessions(bot.cfg.SessionExpirePeriod)
+			if len(ids) != 0 {
+				log.Infof("clear expired sessions: %v", ids)
+			}
 		case <-bot.stop:
 			return
 		}
@@ -127,7 +123,9 @@ func (bot *Bot) Stop() {
 func (bot *Bot) registerRoute() error {
 	bot.handler.GET("/ping", bot.pingHandler)
 	bot.handler.GET("/stop", bot.stopHandler)
-	bot.handler.POST("/linebot", bot.linebotCallback)
+	for key := range bot.cfg.Bots {
+		bot.handler.POST(key, bot.linebotCallback)
+	}
 	return nil
 }
 

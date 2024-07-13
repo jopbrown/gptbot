@@ -7,23 +7,21 @@ import (
 )
 
 type SessionManager struct {
-	DefaultRole string
-	Sessions    map[string]*Session
+	Sessions map[string]*Session
 }
 
-func NewSessionManager(defaultRole string) *SessionManager {
+func NewSessionManager() *SessionManager {
 	sessMgr := &SessionManager{}
-	sessMgr.DefaultRole = defaultRole
 	sessMgr.Sessions = make(map[string]*Session)
 	return sessMgr
 }
 
-func (m *SessionManager) GetSession(id string) *Session {
+func (m *SessionManager) GetSession(id string, defaultRole string) *Session {
 	if s, ok := m.Sessions[id]; ok {
 		return s
 	}
 
-	s := NewSession(id, m.DefaultRole)
+	s := NewSession(id, defaultRole)
 	m.Sessions[id] = s
 	return s
 }
@@ -66,7 +64,7 @@ func (s *Session) Clear() {
 }
 
 func (s *Session) ShortID() string {
-	const _SHORT_ID_LEN = 12
+	const _SHORT_ID_LEN = 24
 	if len(s.ID) <= _SHORT_ID_LEN {
 		return s.ID
 	}

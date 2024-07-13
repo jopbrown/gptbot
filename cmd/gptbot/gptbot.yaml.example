@@ -1,5 +1,8 @@
 DebugMode: true
-LineChannelToken: xxxxxxxxx
-LineChannelSecret: xxxxxxxxxx
 ChatGptAccessToken: xxxxxxxxxx
 ServePort: 8888
+Bots:
+    /linebot:
+        DefaultRole: 聊天機器人
+		LineChannelToken: xxxxxxxxx
+		LineChannelSecret: xxxxxxxxxx

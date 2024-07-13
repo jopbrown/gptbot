@@ -14,23 +14,26 @@ import (
 )
 
 type Config struct {
-	DebugMode            bool          `yaml:"DebugMode"`
-	LineChannelToken     string        `yaml:"LineChannelToken"`
-	LineChannelSecret    string        `yaml:"LineChannelSecret"`
-	ChatGptApiUrl        string        `yaml:"ChatGptApiUrl"`
-	ChatGptAccessToken   string        `yaml:"ChatGptAccessToken"`
-	ChatGptModel         string        `yaml:"ChatGptModel"`
-	SessionExpirePeriod  time.Duration `yaml:"SessionExpirePeriod"`
-	SessionClearInterval time.Duration `yaml:"SessionClearInterval"`
-	NotPushExpireMessage bool          `yaml:"NotPushExpireMessage"`
-	DefaultRole          string        `yaml:"DefaultRole"`
-	Roles                Roles         `yaml:"Roles"`
-	ServePort            int           `yaml:"ServePort"`
-	MaxTaskQueueCap      int           `yaml:"MaxTaskQueueCap"`
-	LogPath              string        `yaml:"LogPath"`
-	CmdsTalkToAI         []string      `yaml:"CmdsTalkToAI"`
-	CmdsClearSession     []string      `yaml:"CmdsClearSession"`
-	CmdsChangeRole       []string      `yaml:"CmdsChangeRole"`
+	DebugMode            bool            `yaml:"DebugMode"`
+	ChatGptApiUrl        string          `yaml:"ChatGptApiUrl"`
+	ChatGptAccessToken   string          `yaml:"ChatGptAccessToken"`
+	ChatGptModel         string          `yaml:"ChatGptModel"`
+	SessionExpirePeriod  time.Duration   `yaml:"SessionExpirePeriod"`
+	SessionClearInterval time.Duration   `yaml:"SessionClearInterval"`
+	Bots                 map[string]*Bot `yaml:"Bots"`
+	Roles                Roles           `yaml:"Roles"`
+	ServePort            int             `yaml:"ServePort"`
+	MaxTaskQueueCap      int             `yaml:"MaxTaskQueueCap"`
+	LogPath              string          `yaml:"LogPath"`
+	CmdsTalkToAI         []string        `yaml:"CmdsTalkToAI"`
+	CmdsClearSession     []string        `yaml:"CmdsClearSession"`
+	CmdsChangeRole       []string        `yaml:"CmdsChangeRole"`
+}
+
+type Bot struct {
+	DefaultRole       string `yaml:"DefaultRole"`
+	LineChannelToken  string `yaml:"LineChannelToken"`
+	LineChannelSecret string `yaml:"LineChannelSecret"`
 }
 
 //go:embed default
