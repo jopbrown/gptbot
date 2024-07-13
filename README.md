@@ -52,8 +52,8 @@ ServePort: 8888
 Bots:
     /linebot:
         DefaultRole: 聊天機器人
-		LineChannelToken: xxxxxxxxx
-		LineChannelSecret: xxxxxxxxxx
+        LineChannelToken: xxxxxxxxx
+        LineChannelSecret: xxxxxxxxxx
 ```
 
 > To retrieve environment variables, use the following format: `${env.VARNAME}`.
