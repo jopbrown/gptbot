@@ -1,8 +1,8 @@
 module github.com/jopbrown/gptbot
 
-go 1.21
+go 1.22
 
-toolchain go1.21.0
+toolchain go1.22.11
 
 replace github.com/jopbrown/gobase => ../gobase
 
@@ -10,7 +10,7 @@ require (
 	dario.cat/mergo v1.0.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/jopbrown/gobase v0.0.0-20240603220443-22ee7cde285d
-	github.com/line/line-bot-sdk-go/v7 v7.21.0
+	github.com/line/line-bot-sdk-go/v8 v8.10.2
 	github.com/sashabaranov/go-openai v1.26.3
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240707233637-46b078467d37

@@ -9,7 +9,7 @@ import (
 	"github.com/jopbrown/gobase/errors"
 	"github.com/jopbrown/gobase/log"
 	"github.com/jopbrown/gptbot/pkg/cfgs"
-	"github.com/line/line-bot-sdk-go/v7/linebot"
+	"github.com/line/line-bot-sdk-go/v8/linebot"
 	"github.com/sashabaranov/go-openai"
 )
 
@@ -29,6 +29,7 @@ func NewBot(cfg *cfgs.Config) (*Bot, error) {
 	var err error
 	bot := &Bot{}
 	bot.cfg = cfg
+	bot.userNameCache = make(map[string]string)
 
 	bot.lineClients = make(map[string]*linebot.Client, len(cfg.Bots))
 	for path, botcfg := range cfg.Bots {
@@ -37,6 +38,12 @@ func NewBot(cfg *cfgs.Config) (*Bot, error) {
 			return nil, errors.ErrorAt(err)
 		}
 		bot.lineClients[path] = client
+
+		botInfo, err := client.GetBotInfo().Do()
+		if err != nil {
+			return nil, errors.ErrorAt(err)
+		}
+		bot.userNameCache[path] = botInfo.DisplayName
 	}
 
 	gptCfg := openai.DefaultConfig(cfg.ChatGptAccessToken)
@@ -53,8 +60,6 @@ func NewBot(cfg *cfgs.Config) (*Bot, error) {
 	}
 
 	bot.stop = make(chan struct{})
-
-	bot.userNameCache = make(map[string]string)
 
 	if !cfg.DebugMode {
 		gin.SetMode(gin.ReleaseMode)

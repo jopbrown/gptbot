@@ -9,12 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jopbrown/gobase/errors"
 	"github.com/jopbrown/gobase/log"
-	"github.com/line/line-bot-sdk-go/v7/linebot"
+	"github.com/line/line-bot-sdk-go/v8/linebot"
 )
 
 func (bot *Bot) linebotCallback(c *gin.Context) {
 	fpath := c.FullPath()
 	client := bot.lineClients[fpath]
+
 	defaultRole := bot.cfg.Bots[c.FullPath()].DefaultRole
 
 	events, err := client.ParseRequest(c.Request)
@@ -51,9 +52,14 @@ func (bot *Bot) linebotCallback(c *gin.Context) {
 						log.ErrorAt(err)
 						continue
 					}
-					log.Debug("userName: ", userName)
+					botName, err := bot.lineGetBotName(client, fpath)
+					if err != nil {
+						log.ErrorAt(err)
+						continue
+					}
 					bot.taskQueue <- &ChatTask{
 						UserName: userName,
+						BotName:  botName,
 						Session:  session,
 						Message:  msg,
 						IsGroup:  lineIsGroupEvent(event),
@@ -84,13 +90,27 @@ func (bot *Bot) lineReplyFnWithToken(client *linebot.Client, token string) func(
 	}
 }
 
+func (bot *Bot) lineGetBotName(client *linebot.Client, fpath string) (string, error) {
+	if userName, ok := bot.userNameCache[fpath]; ok {
+		return userName, nil
+	}
+	botInfo, err := client.GetBotInfo().Do()
+	if err != nil {
+		log.Warn(errors.GetErrorDetails(errors.ErrorAtf(err, "unable to get bot info: %q", fpath)))
+	}
+	userName := botInfo.DisplayName
+	bot.userNameCache[fpath] = userName
+
+	return userName, nil
+}
+
 func (bot *Bot) lineGetUserName(client *linebot.Client, userID string) (string, error) {
 	if userName, ok := bot.userNameCache[userID]; ok {
 		return userName, nil
 	}
 	profile, err := client.GetProfile(userID).Do()
 	if err != nil {
-		log.Warnf(errors.GetErrorDetails(errors.ErrorAtf(err, "unable to get user profile: %s", userID)))
+		log.Warn(errors.GetErrorDetails(errors.ErrorAtf(err, "unable to get user profile: %s", userID)))
 		return "路人甲", nil
 	}
 	userName := profile.DisplayName

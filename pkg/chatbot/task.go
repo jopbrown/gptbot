@@ -22,6 +22,7 @@ type Task interface {
 
 type ChatTask struct {
 	UserName string
+	BotName  string
 	Session  *Session
 	Message  string
 	IsGroup  bool
@@ -45,6 +46,9 @@ func (task *ChatTask) Do(bot *Bot) error {
 	cmds := bot.cfg.CmdsTalkToAI
 	if len(role.CmdsTalkToAI) > 0 {
 		cmds = role.CmdsTalkToAI
+	}
+	if task.BotName != "" {
+		cmds = append(cmds, "@"+task.BotName)
 	}
 	msg := task.Message
 	msg, isTalkToAI := messageMatchCmd(msg, cmds)
