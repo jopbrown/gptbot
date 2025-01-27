@@ -14,10 +14,13 @@ import (
 )
 
 type Config struct {
-	DebugMode            bool            `yaml:"DebugMode"`
-	ChatGptApiUrl        string          `yaml:"ChatGptApiUrl"`
-	ChatGptAccessToken   string          `yaml:"ChatGptAccessToken"`
-	ChatGptModel         string          `yaml:"ChatGptModel"`
+	DebugMode bool `yaml:"DebugMode"`
+
+	ChatGptApiUrl           string `yaml:"ChatGptApiUrl"`
+	ChatGptAccessToken      string `yaml:"ChatGptAccessToken"`
+	ChatGptModel            string `yaml:"ChatGptModel"`
+	ChatGptHideThinkSection bool   `yaml:"ChatGptHideThinkSection"`
+
 	SessionExpirePeriod  time.Duration   `yaml:"SessionExpirePeriod"`
 	SessionClearInterval time.Duration   `yaml:"SessionClearInterval"`
 	Bots                 map[string]*Bot `yaml:"Bots"`

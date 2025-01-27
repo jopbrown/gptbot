@@ -111,6 +111,13 @@ func (task *ChatTask) Do(bot *Bot) error {
 	respMsg.Role = openai.ChatMessageRoleAssistant
 	respMsg.Content = resp.Choices[0].Message.Content
 
+	if bot.cfg.ChatGptHideThinkSection {
+		_, after, found := strings.Cut(respMsg.Content, "</think>")
+		if found {
+			respMsg.Content = after
+		}
+	}
+
 	task.Session.AddMessage(respMsg)
 	log.Info("AI:", respMsg.Content)
 	fmt.Fprintln(recorder, "AI:", respMsg.Content)
@@ -130,14 +137,24 @@ func (task *ChatTask) Do(bot *Bot) error {
 
 var reImgUrl = regexp.MustCompile(`https://image.pollinations.ai/prompt/[-a-zA-Z0-9@:%_\+,.~#?&//=\s]+`)
 
+const _MAX_REPLY_IMG_COUNT = 4
+
 func getImageUrlsFromReply(reply string) (string, []string) {
 	urls := reImgUrl.FindAllString(reply, -1)
 	imgUrls := make([]string, 0, len(urls))
+
 	for i, url := range urls {
 		tidyUrl := strings.TrimSpace(url)
 		tidyUrl = strings.ReplaceAll(tidyUrl, " ", "-")
-		imgUrls = append(imgUrls, tidyUrl)
-		reply = strings.Replace(reply, url, fmt.Sprintf("圖%d", i+1), -1)
+		if i < _MAX_REPLY_IMG_COUNT {
+			imgUrls = append(imgUrls, tidyUrl)
+			reply = strings.Replace(reply, url, fmt.Sprintf("圖%d", i+1), -1)
+		}
+	}
+
+	if len(urls) > 4 {
+		imgUrls = imgUrls[:4]
+		reply += "\n(最多只能顯示四張圖片)"
 	}
 
 	return reply, imgUrls
